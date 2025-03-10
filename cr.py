@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import torch
+import importlib
 from demucs.htdemucs import HTDemucs
 import torch.serialization
 import sys
@@ -74,26 +75,6 @@ def send_discord_error(error_title, error_details, error_traceback=None):
         print(f"Erreur lors de l'envoi du message à Discord: {e}")
         return False
 
-def error_handler(func):
-    """
-    Décorateur pour gérer les erreurs et les envoyer à Discord.
-    """
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            tb = traceback.format_exc()
-            
-            error_title = f"Erreur dans {func.__name__}"
-            error_details = f"Une erreur s'est produite: {str(e)}"
-            
-            send_discord_error(error_title, error_details, tb)
-            
-            # Re-raise l'exception pour ne pas cacher l'erreur
-            raise
-    
-    return wrapper
-
 def upload_to_cloudflare(file_path, target_name):
     """
     Upload un fichier vers Cloudflare R2 et attendre que le téléchargement soit terminé.
@@ -112,9 +93,8 @@ def upload_to_cloudflare(file_path, target_name):
         
         # Vérification que toutes les variables d'environnement nécessaires sont définies
         if not all([access_key_id, account_id, secret_access_key, bucket_name]):
-            error_msg = "Variables d'environnement manquantes pour Cloudflare R2"
-            print(f"Erreur: {error_msg}")
-            send_discord_error("Configuration Cloudflare R2", error_msg)
+            print("Erreur: Variables d'environnement manquantes pour Cloudflare R2")
+            send_discord_error("Configuration Cloudflare R2", "Variables d'environnement manquantes pour Cloudflare R2")
             return False
 
         # Configuration du client S3 pour Cloudflare R2
@@ -142,9 +122,8 @@ def upload_to_cloudflare(file_path, target_name):
         return True
     
     except Exception as e:
-        error_msg = f"Erreur lors du téléchargement vers Cloudflare R2: {e}"
-        print(error_msg)
-        send_discord_error("Erreur de téléchargement Cloudflare", error_msg, traceback.format_exc())
+        print(f"Erreur lors du téléchargement vers Cloudflare R2: {e}")
+        send_discord_error("Erreur de téléchargement Cloudflare", f"Erreur lors du téléchargement vers Cloudflare R2: {e}", traceback.format_exc())
         return False
 
 class ProgressPercentage:
@@ -240,9 +219,8 @@ def download_from_url(url, output_file):
         return True
         
     except Exception as e:
-        error_msg = f"Erreur lors du téléchargement depuis {url}: {e}"
-        print(error_msg)
-        send_discord_error("Erreur de téléchargement URL", error_msg, traceback.format_exc())
+        print(f"Erreur lors du téléchargement depuis {url}: {e}")
+        send_discord_error("Erreur de téléchargement URL", f"Erreur lors du téléchargement depuis {url}: {e}", traceback.format_exc())
         
         # Si le fichier a été partiellement téléchargé, le supprimer
         if os.path.exists(output_file):
@@ -267,13 +245,12 @@ def get_audio_duration(filename):
     """Obtient la durée d'un fichier audio en secondes"""
     try:
         cmd = ['ffprobe', '-v', 'error', '-show_entries', 'format=duration', 
-               '-of', 'default=noprint_wrappers=1:nokey=1', filename]
+            '-of', 'default=noprint_wrappers=1:nokey=1', filename]
         result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         return float(result.stdout.strip())
     except Exception as e:
-        error_msg = f"Erreur lors de l'obtention de la durée du fichier audio {filename}: {e}"
-        print(error_msg)
-        send_discord_error("Erreur d'analyse audio", error_msg, traceback.format_exc())
+        print(f"Erreur lors de l'obtention de la durée du fichier audio: {e}")
+        send_discord_error("Erreur d'analyse audio", f"Erreur lors de l'obtention de la durée du fichier audio {filename}: {e}", traceback.format_exc())
         raise
 
 def split_audio_file(input_file, chunk_duration=600):  # 600 secondes = 10 minutes
@@ -299,19 +276,18 @@ def split_audio_file(input_file, chunk_duration=600):  # 600 secondes = 10 minut
             # Utiliser ffmpeg pour extraire le segment
             if i == num_chunks - 1:  # Dernier morceau jusqu'à la fin
                 cmd = ['ffmpeg', '-y', '-i', input_file, '-ss', str(start_time), 
-                       '-acodec', 'pcm_s16le', output_file]
+                    '-acodec', 'pcm_s16le', output_file]
             else:
                 cmd = ['ffmpeg', '-y', '-i', input_file, '-ss', str(start_time), 
-                       '-t', str(chunk_duration), '-acodec', 'pcm_s16le', output_file]
+                    '-t', str(chunk_duration), '-acodec', 'pcm_s16le', output_file]
             
             subprocess.run(cmd, check=True)
             chunk_files.append(output_file)
         
         return chunk_files
     except Exception as e:
-        error_msg = f"Erreur lors du découpage du fichier audio {input_file}: {e}"
-        print(error_msg)
-        send_discord_error("Erreur de découpage audio", error_msg, traceback.format_exc())
+        print(f"Erreur lors du découpage du fichier audio: {e}")
+        send_discord_error("Erreur de découpage audio", f"Erreur lors du découpage du fichier audio {input_file}: {e}", traceback.format_exc())
         raise
 
 def process_files_with_inference(chunk_files, output_folder, args):
@@ -335,9 +311,8 @@ def process_files_with_inference(chunk_files, output_folder, args):
         sys.argv = full_args
         runpy.run_path("inference_modifier.py", run_name='__main__')
     except Exception as e:
-        error_msg = f"Erreur lors de l'exécution d'inference_modifier.py: {e}"
-        print(error_msg)
-        send_discord_error("Erreur de traitement", error_msg, traceback.format_exc())
+        print(f"Erreur lors du traitement avec inference_modifier.py: {e}")
+        send_discord_error("Erreur de traitement", f"Erreur lors du traitement avec inference_modifier.py: {e}", traceback.format_exc())
         raise
 
 def concatenate_audio_files(files, output_file):
@@ -356,36 +331,35 @@ def concatenate_audio_files(files, output_file):
         # Supprimer le fichier de liste
         os.remove(list_file)
     except Exception as e:
-        error_msg = f"Erreur lors de la concaténation des fichiers audio vers {output_file}: {e}"
-        print(error_msg)
-        send_discord_error("Erreur de concaténation audio", error_msg, traceback.format_exc())
+        print(f"Erreur lors de la concaténation des fichiers audio: {e}")
+        send_discord_error("Erreur de concaténation", f"Erreur lors de la concaténation des fichiers audio: {e}", traceback.format_exc())
         raise
 
 def convert_to_mono_flac(input_file, output_file):
     """Convertit un fichier audio en FLAC mono-canal"""
+    # Vérifier que le fichier d'entrée existe
+    if not os.path.exists(input_file):
+        error_msg = f"Le fichier d'entrée {input_file} n'existe pas"
+        print(f"Erreur: {error_msg}")
+        send_discord_error("Fichier introuvable", error_msg)
+        return False
+    
+    # Si le fichier de sortie existe déjà, essayer de le supprimer d'abord
+    if os.path.exists(output_file):
+        try:
+            print(f"Le fichier {output_file} existe déjà, tentative de suppression...")
+            os.remove(output_file)
+            print(f"Fichier {output_file} supprimé avec succès")
+        except OSError as e:
+            print(f"Impossible de supprimer le fichier existant {output_file}: {e}")
+            # Continuer malgré l'erreur, ffmpeg avec -y devrait écraser le fichier
+    
+    # Conversion simple en FLAC mono
+    cmd = ['ffmpeg', '-y', '-i', input_file, '-ac', '1', output_file]
+    
     try:
-        # Vérifier que le fichier d'entrée existe
-        if not os.path.exists(input_file):
-            error_msg = f"Le fichier d'entrée {input_file} n'existe pas"
-            print(f"Erreur: {error_msg}")
-            send_discord_error("Fichier introuvable", error_msg)
-            return False
-        
-        # Si le fichier de sortie existe déjà, essayer de le supprimer d'abord
-        if os.path.exists(output_file):
-            try:
-                print(f"Le fichier {output_file} existe déjà, tentative de suppression...")
-                os.remove(output_file)
-                print(f"Fichier {output_file} supprimé avec succès")
-            except OSError as e:
-                print(f"Impossible de supprimer le fichier existant {output_file}: {e}")
-                # Continuer malgré l'erreur, ffmpeg avec -y devrait écraser le fichier
-        
-        # Conversion simple en FLAC mono
-        cmd = ['ffmpeg', '-y', '-i', input_file, '-ac', '1', output_file]
-        
         print(f"Conversion de {input_file} en {output_file}...")
-        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
         print(f"Conversion réussie: {output_file}")
         return True
     except subprocess.CalledProcessError as e:
@@ -396,30 +370,20 @@ def convert_to_mono_flac(input_file, output_file):
         try:
             print("Tentative avec codec explicite...")
             alt_cmd = ['ffmpeg', '-y', '-i', input_file, '-ac', '1', '-c:a', 'flac', output_file]
-            subprocess.run(alt_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
+            result = subprocess.run(alt_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
             print(f"Conversion alternative réussie: {output_file}")
             return True
         except subprocess.CalledProcessError as e2:
-            error_msg = f"Échec de la conversion audio: {e2}"
+            print(f"Échec de la conversion alternative: {e2}")
             print(f"Sortie d'erreur: {e2.stderr}")
-            send_discord_error("Erreur de conversion audio", error_msg, e2.stderr)
+            send_discord_error("Erreur de conversion audio", f"Échec de la conversion audio: {e2}", e2.stderr)
             return False
-    except Exception as e:
-        error_msg = f"Erreur inattendue lors de la conversion audio: {e}"
-        print(error_msg)
-        send_discord_error("Erreur de conversion audio", error_msg, traceback.format_exc())
-        return False
 
 def cleanup(files):
     """Supprime une liste de fichiers"""
     for file in files:
         if os.path.exists(file):
-            try:
-                os.remove(file)
-            except Exception as e:
-                error_msg = f"Erreur lors de la suppression du fichier {file}: {e}"
-                print(error_msg)
-                send_discord_error("Erreur de nettoyage", error_msg)
+            os.remove(file)
 
 # Gestion du timeout global
 def timeout_handler(signum, frame):
@@ -463,104 +427,97 @@ if __name__ == "__main__":
         input_arg_idx = -1
         output_folder = "./results/"
         
-        try:
-            # Chercher l'argument --input_audio et le fichier d'entrée
-            if "--input_audio" in original_args:
-                input_arg_idx = original_args.index("--input_audio")
-                if input_arg_idx + 1 < len(original_args):
-                    input_source = original_args[input_arg_idx + 1]
-            
-            # Chercher l'argument --output_dir et le dossier de sortie
-            if "--output_dir" in original_args:
-                output_idx = original_args.index("--output_dir")
-                if output_idx + 1 < len(original_args):
-                    output_folder = original_args[output_idx + 1]
-            
-            # Si on n'a pas trouvé de fichier d'entrée, erreur
-            if not input_source:
-                error_msg = "Aucun fichier d'entrée spécifié avec --input_audio"
-                print(f"Erreur: {error_msg}")
-                send_discord_error("Entrée manquante", error_msg)
-                sys.exit(1)
-                
-            # Télécharger l'URL si c'est une URL
-            input_file = input_source
-            if is_url(input_source):
-                # Créer un nom de fichier temporaire pour l'URL
-                url_filename = os.path.basename(input_source.split('?')[0])  # Ignorer les paramètres de l'URL
-                if not url_filename or '.' not in url_filename:
-                    url_filename = "downloaded_audio.flac"  # Nom par défaut
-                input_file = os.path.join(tempfile.gettempdir(), url_filename)
-                
-                # Télécharger l'URL
-                if not download_from_url(input_source, input_file):
-                    error_msg = f"Échec du téléchargement de l'URL: {input_source}"
-                    print(f"Erreur: {error_msg}")
-                    send_discord_error("Téléchargement échoué", error_msg)
-                    sys.exit(1)
-            
-            # Vérifier si le fichier d'entrée existe
-            if not os.path.exists(input_file):
-                error_msg = f"Le fichier d'entrée n'existe pas: {input_file}"
-                print(f"Erreur: {error_msg}")
-                send_discord_error("Fichier introuvable", error_msg)
-                sys.exit(1)
-            
-            # Découper le fichier si nécessaire
-            chunk_files = split_audio_file(input_file)
-            
-            # Traiter les fichiers découpés
-            process_files_with_inference(chunk_files, output_folder, original_args)
-            
-            # Trouver les fichiers de sortie générés
-            output_files = glob.glob(os.path.join(output_folder, "*.wav"))
-            if not output_files:
-                error_msg = f"Aucun fichier de sortie trouvé dans {output_folder}"
-                print(f"Erreur: {error_msg}")
-                send_discord_error("Résultat manquant", error_msg)
-                sys.exit(1)
-            
-            # Si on a plusieurs fichiers, les concaténer
-            final_output = os.path.join(output_folder, "final_output.wav")
-            if len(output_files) > 1:
-                # Trier les fichiers par ordre numérique
-                output_files.sort(key=lambda x: int(os.path.basename(x).split('_')[0]) if os.path.basename(x).split('_')[0].isdigit() else 0)
-                concatenate_audio_files(output_files, final_output)
-            else:
-                final_output = output_files[0]
-            
-            # Convertir en FLAC mono
-            flac_output = os.path.join(output_folder, cloudflare_target_name)
-            if not convert_to_mono_flac(final_output, flac_output):
-                error_msg = f"Échec de la conversion en FLAC: {final_output}"
-                print(f"Erreur: {error_msg}")
-                send_discord_error("Conversion échouée", error_msg)
-                sys.exit(1)
-            
-            # Télécharger le fichier vers Cloudflare
-            if not upload_to_cloudflare(flac_output, cloudflare_target_name):
-                error_msg = f"Échec du téléchargement vers Cloudflare: {flac_output}"
-                print(f"Erreur: {error_msg}")
-                send_discord_error("Téléchargement Cloudflare échoué", error_msg)
-                sys.exit(1)
-            
-            # Nettoyer les fichiers temporaires
-            cleanup(chunk_files)
-            if len(output_files) > 1:
-                cleanup(output_files)
-                cleanup([final_output])
-            
-            # Si le fichier d'entrée était téléchargé, le supprimer aussi
-            if is_url(input_source) and input_file != input_source:
-                cleanup([input_file])
-            
-            print(f"Traitement terminé avec succès: {cloudflare_target_name}")
-            
-        except Exception as e:
-            error_msg = f"Erreur lors du traitement: {e}"
-            print(error_msg)
-            send_discord_error("Erreur de traitement", error_msg, traceback.format_exc())
+        # Chercher l'argument --input_audio et le fichier d'entrée
+        if "--input_audio" in original_args:
+            input_arg_idx = original_args.index("--input_audio")
+            if input_arg_idx + 1 < len(original_args):
+                input_source = original_args[input_arg_idx + 1]
+        
+        # Chercher l'argument --output_dir et le dossier de sortie
+        if "--output_dir" in original_args:
+            output_idx = original_args.index("--output_dir")
+            if output_idx + 1 < len(original_args):
+                output_folder = original_args[output_idx + 1]
+        
+        # Si on n'a pas trouvé de fichier d'entrée, erreur
+        if not input_source:
+            error_msg = "Aucun fichier d'entrée spécifié avec --input_audio"
+            print(f"Erreur: {error_msg}")
+            send_discord_error("Entrée manquante", error_msg)
             sys.exit(1)
+            
+        # Télécharger l'URL si c'est une URL
+        input_file = input_source
+        if is_url(input_source):
+            # Créer un nom de fichier temporaire pour l'URL
+            url_filename = os.path.basename(input_source.split('?')[0])  # Ignorer les paramètres de l'URL
+            if not url_filename or '.' not in url_filename:
+                url_filename = "downloaded_audio.flac"  # Nom par défaut
+            input_file = os.path.join(tempfile.gettempdir(), url_filename)
+            
+            # Télécharger l'URL
+            if not download_from_url(input_source, input_file):
+                error_msg = f"Échec du téléchargement de l'URL: {input_source}"
+                print(f"Erreur: {error_msg}")
+                send_discord_error("Téléchargement échoué", error_msg)
+                sys.exit(1)
+        
+        # Vérifier si le fichier d'entrée existe
+        if not os.path.exists(input_file):
+            error_msg = f"Le fichier d'entrée n'existe pas: {input_file}"
+            print(f"Erreur: {error_msg}")
+            send_discord_error("Fichier introuvable", error_msg)
+            sys.exit(1)
+        
+        # Découper le fichier si nécessaire
+        chunk_files = split_audio_file(input_file)
+        
+        # Traiter les fichiers découpés
+        process_files_with_inference(chunk_files, output_folder, original_args)
+        
+        # Trouver les fichiers de sortie générés
+        output_files = glob.glob(os.path.join(output_folder, "*.wav"))
+        if not output_files:
+            error_msg = f"Aucun fichier de sortie trouvé dans {output_folder}"
+            print(f"Erreur: {error_msg}")
+            send_discord_error("Résultat manquant", error_msg)
+            sys.exit(1)
+        
+        # Si on a plusieurs fichiers, les concaténer
+        final_output = os.path.join(output_folder, "final_output.wav")
+        if len(output_files) > 1:
+            # Trier les fichiers par ordre numérique
+            output_files.sort(key=lambda x: int(os.path.basename(x).split('_')[0]) if os.path.basename(x).split('_')[0].isdigit() else 0)
+            concatenate_audio_files(output_files, final_output)
+        else:
+            final_output = output_files[0]
+        
+        # Convertir en FLAC mono
+        flac_output = os.path.join(output_folder, cloudflare_target_name)
+        if not convert_to_mono_flac(final_output, flac_output):
+            error_msg = f"Échec de la conversion en FLAC: {final_output}"
+            print(f"Erreur: {error_msg}")
+            send_discord_error("Conversion échouée", error_msg)
+            sys.exit(1)
+        
+        # Télécharger le fichier vers Cloudflare
+        if not upload_to_cloudflare(flac_output, cloudflare_target_name):
+            error_msg = f"Échec du téléchargement vers Cloudflare: {flac_output}"
+            print(f"Erreur: {error_msg}")
+            send_discord_error("Téléchargement Cloudflare échoué", error_msg)
+            sys.exit(1)
+        
+        # Nettoyer les fichiers temporaires
+        cleanup(chunk_files)
+        if len(output_files) > 1:
+            cleanup(output_files)
+            cleanup([final_output])
+        
+        # Si le fichier d'entrée était téléchargé, le supprimer aussi
+        if is_url(input_source) and input_file != input_source:
+            cleanup([input_file])
+        
+        print(f"Traitement terminé avec succès: {cloudflare_target_name}")
         
         # Désactiver l'alarme
         signal.alarm(0)
