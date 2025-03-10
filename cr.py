@@ -32,7 +32,7 @@ def send_discord_error(error_title, error_details, error_traceback=None):
         error_traceback: Traceback de l'erreur (optionnel)
     """
     try:
-        webhook_url = os.environ.get("RUNPOD_SECRET_DISCORD_WEBHOOK_URL")
+        webhook_url = os.environ.get("RUNPOD_SECRET_DISCORD_WEBHOOK_URL_SALON_ERROR")
         
         if not webhook_url:
             print("Erreur: URL du webhook Discord manquante dans les variables d'environnement")
