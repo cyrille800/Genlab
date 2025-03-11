@@ -33,7 +33,6 @@ def send_discord_error(error_title, error_details, error_traceback=None):
     """
     try:
         webhook_url = os.environ.get("RUNPOD_SECRET_DISCORD_WEBHOOK_URL_SALON_ERROR")
-        print(webhook_url)
         
         if not webhook_url:
             print("Erreur: URL du webhook Discord manquante dans les variables d'environnement")
@@ -510,12 +509,13 @@ def get_gpu_memory_category():
 
 def process_files_with_inference(chunk_files, output_folder, args):
     """
-    Traite tous les fichiers découpés avec inference.py
+    Traite tous les fichiers découpés avec le script d'inférence
     
     Returns:
         bool: True si le traitement a réussi, False sinon
     """
-    inference_script = "inference.py"  # Nom du script corrigé
+    # Récupérer le nom du script d'inférence du premier argument
+    inference_script = args[0]
     
     try:
         # Construire les arguments pour inference.py
@@ -532,8 +532,8 @@ def process_files_with_inference(chunk_files, output_folder, args):
         os.makedirs(output_folder, exist_ok=True)
         
         large, nb_chunk = get_gpu_memory_category()
-        # Exécuter inference.py avec les arguments
-        full_args = [inference_script] + input_args + orig_args + [el for el in ["--output_folder","./results/",large,"--only_vocals","--overlap_large","0.0001","--overlap_small","1","--chunk_size", str(nb_chunk)] if el!=""]
+        # Exécuter le script d'inférence avec les arguments
+        full_args = [inference_script] + input_args + orig_args[1:] + [el for el in ["--output_folder","./results/",large,"--only_vocals","--overlap_large","0.0001","--overlap_small","1","--chunk_size", str(nb_chunk)] if el!=""]
         sys.argv = full_args
         print(f"Exécution de {inference_script} avec les arguments: {' '.join(full_args)}")
         
@@ -710,8 +710,6 @@ if __name__ == "__main__":
         print(f"Fichier d'état qui sera téléversé: {status_file_r2_path}")
         
         # Créer le fichier d'état local (NOT_DONE par défaut)
-        
-        # Créer le fichier d'état local (NOT_DONE par défaut)
         status_file = create_status_file(base_name, "NOT_DONE")
         
         # Vérifier le type de source
@@ -763,8 +761,8 @@ if __name__ == "__main__":
         chunk_files = split_audio_file(input_file)
         
         # Traiter les morceaux
-        if not process_files_with_inference(chunk_files, output_folder, original_args[1:]):  # Skip inference.py dans les args
-            error_msg = "Erreur lors du traitement des fichiers avec inference.py"
+        if not process_files_with_inference(chunk_files, output_folder, original_args):
+            error_msg = "Erreur lors du traitement des fichiers avec le script d'inférence"
             print(error_msg)
             send_discord_error("Erreur de traitement", error_msg)
             raise Exception(error_msg)
