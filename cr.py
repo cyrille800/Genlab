@@ -20,7 +20,7 @@ import datetime
 import signal
 
 # Constante pour la durée maximale d'exécution (en secondes)
-MAX_EXECUTION_TIME = 3600  # 1 heure par défaut, ajustez selon vos besoins
+MAX_EXECUTION_TIME = 200  # 1 heure par défaut, ajustez selon vos besoins
 
 def send_discord_error(error_title, error_details, error_traceback=None):
     """
