@@ -20,7 +20,7 @@ import datetime
 import signal
 
 # Constante pour la durée maximale d'exécution (en secondes)
-MAX_EXECUTION_TIME = 200  # 1 heure par défaut, ajustez selon vos besoins
+MAX_EXECUTION_TIME = 3000  # 1 heure par défaut, ajustez selon vos besoins
 
 PROVIDER_POD = "RUNPOD_SECRET" if os.environ.get("RUNPOD_SECRET_CLOUDFARE_R2_ACCESS_KEY_ID") else "VASTAI_SECRET"
 
