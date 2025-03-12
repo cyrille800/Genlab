@@ -22,6 +22,8 @@ import signal
 # Constante pour la durée maximale d'exécution (en secondes)
 MAX_EXECUTION_TIME = 200  # 1 heure par défaut, ajustez selon vos besoins
 
+PROVIDER_POD = "RUNPOD_SECRET" if os.environ.get("RUNPOD_SECRET_CLOUDFARE_R2_ACCESS_KEY_ID") else "VASTAI_SECRET"
+
 def send_discord_error(error_title, error_details, error_traceback=None):
     """
     Envoie un message d'erreur à un webhook Discord.
@@ -32,7 +34,10 @@ def send_discord_error(error_title, error_details, error_traceback=None):
         error_traceback: Traceback de l'erreur (optionnel)
     """
     try:
-        webhook_url = os.environ.get("RUNPOD_SECRET_DISCORD_WEBHOOK_URL_SALON_ERROR")
+
+        webhook_url_param1 = os.environ.get("DISCORD_WEBHOOK_URL_SALON_ERROR_PART1")
+        webhook_url_param2 = os.environ.get("DISCORD_WEBHOOK_URL_SALON_ERROR_PART2")
+        webhook_url = os.environ.get(f"https://discord.com/api/webhooks/{webhook_url_param1}/{webhook_url_param2}")
         
         if not webhook_url:
             print("Erreur: URL du webhook Discord manquante dans les variables d'environnement")
@@ -209,10 +214,10 @@ def upload_to_cloudflare(file_path, target_name):
     """
     try:            
         # Récupération des informations d'identification depuis les variables d'environnement
-        access_key_id = os.environ.get("RUNPOD_SECRET_CLOUDFARE_R2_ACCESS_KEY_ID")
-        account_id = os.environ.get("RUNPOD_SECRET_CLOUDFARE_R2_ACCOUNT_ID")
-        secret_access_key = os.environ.get("RUNPOD_SECRET_CLOUDFARE_R2_SECRET_ACCESS_KEY")
-        bucket_name = os.environ.get("RUNPOD_SECRET_CLOUDFARE_R2_VOLUME_RUNPOD_NAME")
+        access_key_id = os.environ.get(f"{PROVIDER_POD}_CLOUDFARE_R2_ACCESS_KEY_ID")
+        account_id = os.environ.get(f"{PROVIDER_POD}_CLOUDFARE_R2_ACCOUNT_ID")
+        secret_access_key = os.environ.get(f"{PROVIDER_POD}_CLOUDFARE_R2_SECRET_ACCESS_KEY")
+        bucket_name = os.environ.get(f"{PROVIDER_POD}_CLOUDFARE_R2_VOLUME_RUNPOD_NAME")
         
         # Vérification que toutes les variables d'environnement nécessaires sont définies
         if not all([access_key_id, account_id, secret_access_key, bucket_name]):
@@ -339,10 +344,10 @@ def download_from_r2(r2_path, local_output_path):
     """
     try:
         # Récupération des informations d'identification depuis les variables d'environnement
-        access_key_id = os.environ.get("RUNPOD_SECRET_CLOUDFARE_R2_ACCESS_KEY_ID")
-        account_id = os.environ.get("RUNPOD_SECRET_CLOUDFARE_R2_ACCOUNT_ID")
-        secret_access_key = os.environ.get("RUNPOD_SECRET_CLOUDFARE_R2_SECRET_ACCESS_KEY")
-        bucket_name = os.environ.get("RUNPOD_SECRET_CLOUDFARE_R2_VOLUME_RUNPOD_NAME")
+        access_key_id = os.environ.get(f"{PROVIDER_POD}_CLOUDFARE_R2_ACCESS_KEY_ID")
+        account_id = os.environ.get(f"{PROVIDER_POD}_CLOUDFARE_R2_ACCOUNT_ID")
+        secret_access_key = os.environ.get(f"{PROVIDER_POD}_CLOUDFARE_R2_SECRET_ACCESS_KEY")
+        bucket_name = os.environ.get(f"{PROVIDER_POD}_CLOUDFARE_R2_VOLUME_RUNPOD_NAME")
         
         # Vérification que toutes les variables d'environnement nécessaires sont définies
         if not all([access_key_id, account_id, secret_access_key, bucket_name]):
@@ -1000,10 +1005,25 @@ if __name__ == "__main__":
                 
                 print(f"Téléversement du fichier d'urgence {emergency_file} vers {emergency_target}...")
                 upload_to_cloudflare(emergency_file, emergency_target)
+
+                # Logique conditionnelle
+                if PROVIDER_POD != "RUNPOD_SECRET":
+                    container_id = os.environ.get('CONTAINER_ID')
+                    container_api_key = os.environ.get('CONTAINER_API_KEY')
+                    # Exécution de la commande curl pour Vast.ai
+                    command = f'curl -X DELETE "https://console.vast.ai/api/v0/instances/{container_id}/?api_key={container_api_key}" -H "Accept: application/json"'
+                    subprocess.run(command, shell=True)
+                else:
+                    runpod_pod_id = os.environ.get('RUNPOD_POD_ID')
+                    # Exécution de la commande runpodctl
+                    command = f'runpodctl remove pod {runpod_pod_id}'
+                    subprocess.run(command, shell=True)
+                    
             except Exception as final_err:
                 print(f"Échec de la tentative de récupération absolue: {final_err}")
                 send_discord_error("Échec de récupération absolue", f"Échec de la tentative de récupération absolue: {final_err}")
         
         # Sortir avec le code d'erreur approprié
         print(f"\nFin du script avec statut: {'SUCCÈS' if global_success else 'ÉCHEC'}")
+            
         sys.exit(0 if global_success else 1)
