@@ -24,7 +24,6 @@ MAX_EXECUTION_TIME = 3000  # 1 heure par défaut, ajustez selon vos besoins
 
 PROVIDER_POD = "RUNPOD_SECRET" if os.environ.get("RUNPOD_SECRET_CLOUDFARE_R2_ACCESS_KEY_ID") else "VASTAI_SECRET"
 
-print("=======>",os.environ.get('RUNPOD_POD_ID'))
 def send_discord_error(error_title, error_details, error_traceback=None):
     """
     Envoie un message d'erreur à un webhook Discord.
@@ -1006,24 +1005,29 @@ if __name__ == "__main__":
                 
                 print(f"Téléversement du fichier d'urgence {emergency_file} vers {emergency_target}...")
                 upload_to_cloudflare(emergency_file, emergency_target)
-
-                # Logique conditionnelle
-                if PROVIDER_POD != "RUNPOD_SECRET":
-                    container_id = os.environ.get('CONTAINER_ID')
-                    container_api_key = os.environ.get('CONTAINER_API_KEY')
-                    # Exécution de la commande curl pour Vast.ai
-                    command = f'curl -X DELETE "https://console.vast.ai/api/v0/instances/{container_id}/?api_key={container_api_key}" -H "Accept: application/json"'
-                    subprocess.run(command, shell=True)
-                else:
-                    runpod_pod_id = os.environ.get('RUNPOD_POD_ID')
-                    # Exécution de la commande runpodctl
-                    command = f'runpodctl remove pod {runpod_pod_id}'
-                    subprocess.run(command, shell=True)
-                    
+                
             except Exception as final_err:
                 print(f"Échec de la tentative de récupération absolue: {final_err}")
                 send_discord_error("Échec de récupération absolue", f"Échec de la tentative de récupération absolue: {final_err}")
-        
+
+        try:
+            # Logique conditionnelle
+            if PROVIDER_POD != "RUNPOD_SECRET":
+                container_id = os.environ.get('CONTAINER_ID')
+                container_api_key = os.environ.get('CONTAINER_API_KEY')
+                # Exécution de la commande curl pour Vast.ai
+                command = f'curl -X DELETE "https://console.vast.ai/api/v0/instances/{container_id}/?api_key={container_api_key}" -H "Accept: application/json"'
+                subprocess.run(command, shell=True)
+            else:
+                runpod_pod_id = os.environ.get('RUNPOD_POD_ID')
+                # Exécution de la commande runpodctl
+                command = f'runpodctl remove pod {runpod_pod_id}'
+                subprocess.run(command, shell=True)
+        except Exception as e:
+            id_machine = os.environ.get('RUNPOD_POD_ID') if PROVIDER_POD=="RUNPOD_SECRET" else os.environ.get('CONTAINER_ID')
+            print(f"Échec de la tentative de de suppression du pod {id_machine}")
+            send_discord_error("Échec de suppresion du pod ", f"Échec de la tentative de suppression du pod {PROVIDER_POD}: {id_machine}")
+                    
         # Sortir avec le code d'erreur approprié
         print(f"\nFin du script avec statut: {'SUCCÈS' if global_success else 'ÉCHEC'}")
             
