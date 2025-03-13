@@ -871,6 +871,7 @@ if __name__ == "__main__":
         if is_temp_file and os.path.exists(input_file):
             try:
                 os.remove(input_file)
+                os.remove(os.path.join(output_folder, output_flac))
                 print(f"Fichier temporaire supprimé: {input_file}")
             except Exception as e:
                 print(f"Impossible de supprimer le fichier temporaire {input_file}: {e}")
