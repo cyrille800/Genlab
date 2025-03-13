@@ -24,6 +24,7 @@ MAX_EXECUTION_TIME = 3000  # 1 heure par défaut, ajustez selon vos besoins
 
 PROVIDER_POD = "RUNPOD_SECRET" if os.environ.get("RUNPOD_SECRET_CLOUDFARE_R2_ACCESS_KEY_ID") else "VASTAI_SECRET"
 
+print("=======>",os.environ.get('RUNPOD_POD_ID'))
 def send_discord_error(error_title, error_details, error_traceback=None):
     """
     Envoie un message d'erreur à un webhook Discord.
