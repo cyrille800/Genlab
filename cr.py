@@ -573,71 +573,50 @@ def monitor_output_generation(func):
         # Valeurs pour le suivi de progression
         start_increment = 25
         pourcentage_avancement = 60/len(chunk_files)
-        current_progress = start_increment
+        current_progress = start_increment+pourcentage_avancement
         
-        # Nombre de paires de fichiers attendues (1 paire par fichier d'entrée)
+        # Nombre de paires de fichiers attendues
         processed_chunks = 0
         
-        # Fonction pour vérifier les nouveaux fichiers et mettre à jour la progression
         def check_new_files():
-            nonlocal processed_chunks, current_progress
+            nonlocal processed_chunks, current_progress, existing_files
             
-            # Obtenir la liste actuelle des fichiers
             current_files = set(os.listdir(output_folder))
-            
-            # Calculer les nouveaux fichiers
             new_files = current_files - existing_files
             
-            # Vérifier si de nouvelles paires de fichiers ont été générées
             new_pairs_count = len(new_files) // 2
             
-            # Si de nouvelles paires complètes ont été générées
             if new_pairs_count > processed_chunks:
                 pairs_to_process = new_pairs_count - processed_chunks
                 
-                # Pour chaque nouvelle paire complète
                 for _ in range(pairs_to_process):
-                    # Mettre à jour le compteur
                     processed_chunks += 1
-                    
-                    # Appeler push_kv_runpod avec la progression actuelle
                     push_kv_runpod(current_progress)
                     print(f"Progression: {current_progress:.2f}% - Traité {processed_chunks}/{len(chunk_files)} fichiers")
-                    
-                    # Mettre à jour la progression pour le prochain appel
                     current_progress += pourcentage_avancement
                 
-                # Mettre à jour la liste des fichiers existants
                 existing_files.update(new_files)
         
-        # Lancer un thread pour surveiller le dossier de sortie
-        import threading
         stop_monitoring = False
         
         def monitor_folder():
             while not stop_monitoring:
                 if os.path.exists(output_folder):
                     check_new_files()
-                time.sleep(1)  # Vérifier toutes les secondes
+                time.sleep(1)  # Vérifier toutes les 200ms
         
-        # Démarrer le thread de surveillance
         monitor_thread = threading.Thread(target=monitor_folder)
         monitor_thread.daemon = True
         monitor_thread.start()
         
         try:
-            # Exécuter la fonction originale
             result = func(chunk_files, output_folder, args, *moreargs, **kwargs)
-            
-            # Attendre un peu pour s'assurer que tous les fichiers sont détectés
-            time.sleep(2)
+            time.sleep(1)  # Attente réduite
             check_new_files()
-            
             return result
         finally:
-            # Arrêter le thread de surveillance
             stop_monitoring = True
-            monitor_thread.join(timeout=5)
+            monitor_thread.join(timeout=2)
     
     return wrapper
 
@@ -1139,6 +1118,7 @@ if __name__ == "__main__":
             if PROVIDER_POD == "RUNPOD_SECRET" or PROVIDER_POD == "":
                 runpod_pod_id = os.environ.get('RUNPOD_POD_ID')
                 # Exécution de la commande runpodctl
+                print("===>", runpod_pod_id)
                 command = f'runpodctl remove pod {runpod_pod_id}'
                 subprocess.run(command, shell=True)
             else:
