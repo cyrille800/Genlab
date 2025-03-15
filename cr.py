@@ -18,12 +18,42 @@ import traceback
 import pynvml
 import datetime
 import signal
+import requests
+import json
 
 # Constante pour la durée maximale d'exécution (en secondes)
 MAX_EXECUTION_TIME = 3000  # 1 heure par défaut, ajustez selon vos besoins
 
 PROVIDER_POD = "RUNPOD_SECRET" if os.environ.get("RUNPOD_SECRET_CLOUDFARE_R2_ACCESS_KEY_ID") else "VASTAI_SECRET"
 
+def push_kv_runpod(data):
+    try:
+
+        account_id = os.environ.get(f"{PROVIDER_POD}_CLOUDFARE_R2_ACCOUNT_ID")
+        kv_namespace_id = os.environ.get(f"{PROVIDER_POD}_CLOUDFARE_KV_NAMESPACE_ID")
+        api_token = os.environ.get(f"{PROVIDER_POD}_CLOUDFARE_KV_API_TOKEN")
+        genlab_customer_id = os.environ.get(f"{PROVIDER_POD}_GENLAB_CUSTOMER_ID")
+        
+        # Headers pour l'authentification
+        headers = {
+            "Authorization": f"Bearer {api_token}",
+            "Content-Type": "application/json"
+        }
+    
+        url_kv = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/storage/kv/namespaces/{kv_namespace_id}/values/{genlab_customer_id}"
+    
+        response = requests.put(url_kv, headers=headers, data=json.dumps({
+            "step": "extract instruments",
+            "value": data
+        })
+        if response!=200:
+            send_discord_error("Erreur de fichier d'état", f"Erreur de mise a jour du kv dans cloudfare pour le client numero: {}")
+        else:
+            print("mise a jour -->", data)                                                                                        
+    except Exception as e:
+        print(f"Erreur de mise a jour du kv dans cloudfare: {e}")
+        send_discord_error("Erreur de fichier d'état", f"Erreur de mise a jour du kv dans cloudfare: {e}", traceback.format_exc())
+    
 def send_discord_error(error_title, error_details, error_traceback=None):
     """
     Envoie un message d'erreur à un webhook Discord.
