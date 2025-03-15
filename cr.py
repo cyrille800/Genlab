@@ -652,7 +652,7 @@ def process_files_with_inference(chunk_files, output_folder, args):
         
         # Définir les variables d'environnement pour limiter la mémoire GPU
         env_vars = {
-            "PYTORCH_CUDA_ALLOC_CONF": "max_split_size_mb:14000",  # Limite à ~14GB (environ 85% d'un GPU 16GB)
+            "PYTORCH_CUDA_ALLOC_CONF": "max_split_size_mb:12000",  # Limite à ~12GB (environ 85% d'un GPU 16GB)
             "CUDA_VISIBLE_DEVICES": "0"
         }
         
