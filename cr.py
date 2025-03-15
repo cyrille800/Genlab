@@ -633,13 +633,13 @@ def process_files_with_inference(chunk_files, output_folder, args):
     
     try:
         # Définir les limites de mémoire GPU avant toute importation
-        os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:12000"
+        # Utilisez cette configuration simplifiée
+        os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:10000"
         os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-        # Ajoutez ces lignes au début de votre fonction
-        os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:10000,garbage_collection_threshold:0.6,roundup_power2:False"
-        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-        # Optionnellement, ajoutez cette ligne pour limiter la mémoire réservée par PyTorch
-        os.environ["PYTORCH_CUDA_MEMORY_FRACTION"] = "0.7"  # Limite à 70% du GPU
+        
+        # Si vous voulez limiter davantage, essayez également ceci
+        # (n'utilisez que si votre version de PyTorch le supporte)
+        os.environ["PYTORCH_CUDA_MEMORY_FRACTION"] = "0.7"
                 
         # Construire les arguments pour inference.py
         input_args = ["--input_audio"] + chunk_files
