@@ -51,10 +51,8 @@ def push_kv_runpod(data):
             "value": data
         }))
 
-        print("---> statuc = ",response)
-        print("---> statuc = ",type(response.status_code))
         if response.status_code!=200:
-            send_discord_error("Erreur de fichier d'état", f"Erreur de mise a jour du kv dans cloudfare pour le client numero: {genlab_customer_id}, {response} {response.status_code}")                                                      
+            send_discord_error("Erreur de fichier d'état", f"Erreur de mise a jour du kv dans cloudfare pour le client numero: {genlab_customer_id}")                                                      
     except Exception as e:
         print(f"Erreur de mise a jour du kv dans cloudfare: {e}")
         send_discord_error("Erreur de fichier d'état", f"Erreur de mise a jour du kv dans cloudfare: {e}", traceback.format_exc())
