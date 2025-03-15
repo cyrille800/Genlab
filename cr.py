@@ -1115,7 +1115,7 @@ if __name__ == "__main__":
             
         try:
             # Logique conditionnelle
-            if PROVIDER_POD == "RUNPOD_SECRET" or PROVIDER_POD == "":
+            if PROVIDER_POD == "RUNPOD_SECRET_" or PROVIDER_POD == "":
                 runpod_pod_id = os.environ.get('RUNPOD_POD_ID')
                 # Exécution de la commande runpodctl
                 print("===>", runpod_pod_id)
@@ -1128,7 +1128,7 @@ if __name__ == "__main__":
                 command = f'curl -X DELETE "https://console.vast.ai/api/v0/instances/{container_id}/?api_key={container_api_key}" -H "Accept: application/json"'
                 subprocess.run(command, shell=True)
         except Exception as e:
-            id_machine = os.environ.get('RUNPOD_POD_ID') if PROVIDER_POD=="RUNPOD_SECRET" or PROVIDER_POD == "" else os.environ.get('CONTAINER_ID')
+            id_machine = os.environ.get('RUNPOD_POD_ID') if PROVIDER_POD=="RUNPOD_SECRET_" or PROVIDER_POD == "" else os.environ.get('CONTAINER_ID')
             print(f"Échec de la tentative de de suppression du pod {id_machine}")
             send_discord_error("Échec de suppresion du pod ", f"Échec de la tentative de suppression du pod {PROVIDER_POD}: {id_machine}")
                     
