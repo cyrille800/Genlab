@@ -646,10 +646,22 @@ def process_files_with_inference(chunk_files, output_folder, args):
         os.makedirs(output_folder, exist_ok=True)
         
         large, nb_chunk = get_gpu_memory_category()
-        # Exécuter le script d'inférence avec les arguments
-        full_args = ["PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:20890 CUDA_VISIBLE_DEVICES=0"]+ [inference_script] + input_args + orig_args[1:] + [el for el in ["--output_folder","./results/",large,"--only_vocals","--overlap_large","0.0001","--overlap_small","1","--chunk_size", str(nb_chunk)] if el!=""]
-        sys.argv = full_args
+        
+        # Construire la liste d'arguments correctement
+        full_args = [sys.executable, inference_script] + input_args + orig_args[1:] + [el for el in ["--output_folder", "./results/", large, "--only_vocals", "--overlap_large", "0.0001", "--overlap_small", "1", "--chunk_size", str(nb_chunk)] if el != ""]
+        
+        # Définir les variables d'environnement pour limiter la mémoire GPU
+        env_vars = {
+            "PYTORCH_CUDA_ALLOC_CONF": "max_split_size_mb:14000",  # Limite à ~14GB (environ 85% d'un GPU 16GB)
+            "CUDA_VISIBLE_DEVICES": "0"
+        }
+        
+        # Combiner l'environnement actuel avec nos nouvelles variables
+        my_env = os.environ.copy()
+        my_env.update(env_vars)
+        
         print(f"Exécution de {inference_script} avec les arguments: {' '.join(full_args)}")
+        print(f"Limitation mémoire GPU: {env_vars['PYTORCH_CUDA_ALLOC_CONF']}")
         
         # Vérification de l'existence du fichier
         if not os.path.isfile(inference_script):
@@ -657,8 +669,20 @@ def process_files_with_inference(chunk_files, output_folder, args):
             print(f"ERREUR CRITIQUE: {error_msg}")
             send_discord_error("Fichier d'inférence manquant", error_msg)
             return False
+        
+        # Exécuter la commande avec subprocess
+        process = subprocess.run(full_args, env=my_env, capture_output=True, text=True)
+        
+        # Vérifier si le processus s'est terminé avec succès
+        if process.returncode != 0:
+            error_msg = f"Erreur lors de l'exécution: Code de retour {process.returncode}\nStderr: {process.stderr}"
+            print(f"ERREUR CRITIQUE: {error_msg}")
+            send_discord_error("Échec de l'inférence", error_msg)
+            return False
             
-        runpy.run_path(inference_script, run_name='__main__')
+        # Afficher la sortie standard
+        print(process.stdout)
+        
         return True
     except FileNotFoundError as e:
         print(f"ERREUR CRITIQUE - Fichier non trouvé: {e}")
