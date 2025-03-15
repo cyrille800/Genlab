@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import torch
-import importlib
 from demucs.htdemucs import HTDemucs
 import torch.serialization
 import sys
@@ -9,7 +8,6 @@ import os
 import glob
 import subprocess
 import math
-import tempfile
 import boto3
 import threading
 import time
@@ -20,6 +18,8 @@ import datetime
 import signal
 import requests
 import json
+from pydub import AudioSegment
+import functools
 
 # Constante pour la durée maximale d'exécution (en secondes)
 MAX_EXECUTION_TIME = 3000  # 1 heure par défaut, ajustez selon vos besoins
@@ -43,7 +43,7 @@ def push_kv_runpod(data):
         url_kv = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/storage/kv/namespaces/{kv_namespace_id}/values/{genlab_customer_id}"
     
         response = requests.put(url_kv, headers=headers, data=json.dumps({
-            "step": "extract instruments",
+            "step": "(1/5) extract instruments",
             "value": data
         }))
         if response!=200:
@@ -459,7 +459,13 @@ def get_audio_duration(filename):
         raise
 
 def split_audio_file(input_file, chunk_duration=600):  # 600 secondes = 10 minutes
-    """Divise un fichier audio en morceaux de durée spécifiée"""
+    """Divise un fichier audio en morceaux de durée spécifiée en utilisant pydub"""
+    
+    # Récupérer la durée en utilisant pydub
+    def get_audio_duration(file):
+        audio = AudioSegment.from_file(file)
+        return audio.duration_seconds
+    
     duration = get_audio_duration(input_file)
     
     if duration <= chunk_duration:
@@ -469,28 +475,43 @@ def split_audio_file(input_file, chunk_duration=600):  # 600 secondes = 10 minut
     num_chunks = math.ceil(duration / chunk_duration)
     chunk_files = []
     
+    # Charger l'audio avec pydub
+    try:
+        audio = AudioSegment.from_file(input_file)
+    except Exception as e:
+        print(f"Erreur lors du chargement du fichier audio: {e}")
+        if 'send_discord_error' in globals():
+            send_discord_error("Erreur de chargement audio", 
+                              f"Erreur lors du chargement du fichier audio: {e}", 
+                              traceback.format_exc())
+        return [input_file]
+    
     # Créer un dossier temporaire pour les morceaux
     temp_dir = "temp_chunks"
     os.makedirs(temp_dir, exist_ok=True)
     
+    # Convertir la durée en millisecondes pour pydub
+    chunk_duration_ms = chunk_duration * 1000
+    
     for i in range(num_chunks):
-        start_time = i * chunk_duration
+        start_time = i * chunk_duration_ms
+        end_time = min((i + 1) * chunk_duration_ms, len(audio))
+        
         output_file = os.path.join(temp_dir, f"part{i+1}.wav")
         
-        # Utiliser ffmpeg pour extraire le segment
-        if i == num_chunks - 1:  # Dernier morceau jusqu'à la fin
-            cmd = ['ffmpeg', '-y', '-i', input_file, '-ss', str(start_time), 
-                   '-acodec', 'pcm_s16le', output_file]
-        else:
-            cmd = ['ffmpeg', '-y', '-i', input_file, '-ss', str(start_time), 
-                   '-t', str(chunk_duration), '-acodec', 'pcm_s16le', output_file]
-        
         try:
-            subprocess.run(cmd, check=True)
+            # Extraire le segment
+            chunk = audio[start_time:end_time]
+            # Exporter au format WAV
+            chunk.export(output_file, format="wav")
             chunk_files.append(output_file)
-        except subprocess.CalledProcessError as e:
+        except Exception as e:
             print(f"Erreur lors de la découpe du fichier: {e}")
-            send_discord_error("Erreur de découpage audio", f"Erreur lors de la découpe du fichier audio (segment {i+1}): {e}", traceback.format_exc())
+            if 'send_discord_error' in globals():
+                send_discord_error("Erreur de découpage audio", 
+                                 f"Erreur lors de la découpe du fichier audio (segment {i+1}): {e}", 
+                                 traceback.format_exc())
+            
             # Continuer avec les fichiers déjà créés
             if not chunk_files:
                 # Si aucun morceau n'a été créé, retourner le fichier d'origine
@@ -542,6 +563,86 @@ def get_gpu_memory_category():
     finally:
         pynvml.nvmlShutdown()
 
+def monitor_output_generation(func):
+    @functools.wraps(func)
+    def wrapper(chunk_files, output_folder, args, *moreargs, **kwargs):
+        # Capturer les fichiers existants avant le traitement
+        existing_files = set()
+        if os.path.exists(output_folder):
+            existing_files = set(os.listdir(output_folder))
+        
+        # Valeurs pour le suivi de progression
+        start_increment = 25
+        pourcentage_avancement = 60/len(chunk_files)
+        current_progress = start_increment
+        
+        # Nombre de paires de fichiers attendues (1 paire par fichier d'entrée)
+        processed_chunks = 0
+        
+        # Fonction pour vérifier les nouveaux fichiers et mettre à jour la progression
+        def check_new_files():
+            nonlocal processed_chunks, current_progress
+            
+            # Obtenir la liste actuelle des fichiers
+            current_files = set(os.listdir(output_folder))
+            
+            # Calculer les nouveaux fichiers
+            new_files = current_files - existing_files
+            
+            # Vérifier si de nouvelles paires de fichiers ont été générées
+            new_pairs_count = len(new_files) // 2
+            
+            # Si de nouvelles paires complètes ont été générées
+            if new_pairs_count > processed_chunks:
+                pairs_to_process = new_pairs_count - processed_chunks
+                
+                # Pour chaque nouvelle paire complète
+                for _ in range(pairs_to_process):
+                    # Mettre à jour le compteur
+                    processed_chunks += 1
+                    
+                    # Appeler push_kv_runpod avec la progression actuelle
+                    push_kv_runpod(current_progress)
+                    print(f"Progression: {current_progress:.2f}% - Traité {processed_chunks}/{len(chunk_files)} fichiers")
+                    
+                    # Mettre à jour la progression pour le prochain appel
+                    current_progress += pourcentage_avancement
+                
+                # Mettre à jour la liste des fichiers existants
+                existing_files.update(new_files)
+        
+        # Lancer un thread pour surveiller le dossier de sortie
+        import threading
+        stop_monitoring = False
+        
+        def monitor_folder():
+            while not stop_monitoring:
+                if os.path.exists(output_folder):
+                    check_new_files()
+                time.sleep(1)  # Vérifier toutes les secondes
+        
+        # Démarrer le thread de surveillance
+        monitor_thread = threading.Thread(target=monitor_folder)
+        monitor_thread.daemon = True
+        monitor_thread.start()
+        
+        try:
+            # Exécuter la fonction originale
+            result = func(chunk_files, output_folder, args, *moreargs, **kwargs)
+            
+            # Attendre un peu pour s'assurer que tous les fichiers sont détectés
+            time.sleep(2)
+            check_new_files()
+            
+            return result
+        finally:
+            # Arrêter le thread de surveillance
+            stop_monitoring = True
+            monitor_thread.join(timeout=5)
+    
+    return wrapper
+
+@monitor_output_generation
 def process_files_with_inference(chunk_files, output_folder, args):
     """
     Traite tous les fichiers découpés avec le script d'inférence
@@ -785,6 +886,9 @@ if __name__ == "__main__":
                 print(error_msg)
                 send_discord_error("Téléchargement R2 échoué", error_msg)
                 sys.exit(1)
+            else:
+                # premiere mise a jour de telchargement du fichier
+                push_kv_runpod(20)
                 
             # Remplacer le chemin R2 par le chemin local dans les arguments
             original_args[input_arg_idx] = input_file
@@ -794,6 +898,8 @@ if __name__ == "__main__":
         
         # Découper le fichier si nécessaire
         chunk_files = split_audio_file(input_file)
+        # deuxieme mise a jour de split du fichier audio
+        push_kv_runpod(25)
         
         # Traiter les morceaux
         if not process_files_with_inference(chunk_files, output_folder, original_args):
@@ -843,6 +949,8 @@ if __name__ == "__main__":
         # Vérifier que le fichier instrumental final existe dans le dossier de sortie
         final_path = os.path.join(os.getcwd(), output_flac)
         
+        # quatrieme mise a jour
+        push_kv_runpod(85)
         if os.path.exists(final_path):
             print(f"Fichier final trouvé: {final_path}")
             
@@ -1023,24 +1131,10 @@ if __name__ == "__main__":
             print(f"ERREUR CRITIQUE lors de la mise à jour du fichier d'état: {e}")
             traceback.print_exc()
             send_discord_error("Erreur fatale de mise à jour du statut", f"ERREUR CRITIQUE lors de la mise à jour du fichier d'état: {e}", traceback.format_exc())
-            
-            # Dernière tentative absolue avec des valeurs entièrement hardcodées
-            try:
-                print("TENTATIVE DE RÉCUPÉRATION D'URGENCE")
-                emergency_file = "absolute_emergency.txt"
-                with open(emergency_file, "w") as f:
-                    f.write("NOT_DONE")  # En cas d'erreur, on suppose que le traitement a échoué
-                
-                # Utiliser le nom cible si disponible, sinon un nom fixe
-                emergency_target = status_file_r2_path if status_file_r2_path else "status_emergency.txt"
-                
-                print(f"Téléversement du fichier d'urgence {emergency_file} vers {emergency_target}...")
-                upload_to_cloudflare(emergency_file, emergency_target)
-                
-            except Exception as final_err:
-                print(f"Échec de la tentative de récupération absolue: {final_err}")
-                send_discord_error("Échec de récupération absolue", f"Échec de la tentative de récupération absolue: {final_err}")
 
+        # quatrieme mise a jour
+        push_kv_runpod(100)
+            
         try:
             # Logique conditionnelle
             if PROVIDER_POD != "RUNPOD_SECRET":
