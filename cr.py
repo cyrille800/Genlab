@@ -71,11 +71,7 @@ def send_discord_error(error_title, error_details, error_traceback=None):
 
         webhook_url_param1 = os.environ.get(f"{PROVIDER_POD}DISCORD_WEBHOOK_URL_SALON_ERROR_PART1")
         webhook_url_param2 = os.environ.get(f"{PROVIDER_POD}DISCORD_WEBHOOK_URL_SALON_ERROR_PART2")
-        webhook_url = os.environ.get(f"https://discord.com/api/webhooks/{webhook_url_param1}/{webhook_url_param2}")
-        
-        if not webhook_url:
-            print("Erreur: URL du webhook Discord manquante dans les variables d'environnement")
-            return False
+        webhook_url = f"https://discord.com/api/webhooks/{webhook_url_param1}/{webhook_url_param2}"
             
         # Construction du message
         message = {
