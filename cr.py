@@ -45,9 +45,9 @@ def push_kv_runpod(data):
         response = requests.put(url_kv, headers=headers, data=json.dumps({
             "step": "extract instruments",
             "value": data
-        })
+        }))
         if response!=200:
-            send_discord_error("Erreur de fichier d'état", f"Erreur de mise a jour du kv dans cloudfare pour le client numero: {}")
+            send_discord_error("Erreur de fichier d'état", f"Erreur de mise a jour du kv dans cloudfare pour le client numero: {genlab_customer_id}")
         else:
             print("mise a jour -->", data)                                                                                        
     except Exception as e:
