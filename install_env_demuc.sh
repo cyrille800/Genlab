@@ -46,13 +46,13 @@ sudo mkdir -p /root/.cache/torch/hub/checkpoints
 sudo mkdir -p /home/$CURRENT_USER/.cache/torch/hub/checkpoints
 
 echo "Téléchargement des checkpoints..."
-sudo wget -O /home/$CURRENT_USER/.cache/torch/hub/checkpoints/f7e0c4bc-ba3fe64a.th "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/f7e0c4bc-ba3fe64a.th"
-sudo wget -O /home/$CURRENT_USER/.cache/torch/hub/checkpoints/d12395a8-e57c48e6.th "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/d12395a8-e57c48e6.th"
-sudo wget -O /home/$CURRENT_USER/.cache/torch/hub/checkpoints/92cfc3b6-ef3bcb9c.th "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/92cfc3b6-ef3bcb9c.th"
-sudo wget -O /home/$CURRENT_USER/.cache/torch/hub/checkpoints/04573f0d-f3cf25b2.th "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/04573f0d-f3cf25b2.th"
-sudo wget -O /home/$CURRENT_USER/.cache/torch/hub/checkpoints/955717e8-8726e21a.th "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/955717e8-8726e21a.th"
-sudo wget -O /home/$CURRENT_USER/.cache/torch/hub/checkpoints/5c90dfd2-34c22ccb.th "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/5c90dfd2-34c22ccb.th"
-sudo wget -O /home/$CURRENT_USER/.cache/torch/hub/checkpoints/75fc33f5-1941ce65.th "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/75fc33f5-1941ce65.th"
+sudo wget -O /root/.cache/torch/hub/checkpoints/f7e0c4bc-ba3fe64a.th "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/f7e0c4bc-ba3fe64a.th"
+sudo wget -O /root/.cache/torch/hub/checkpoints/d12395a8-e57c48e6.th "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/d12395a8-e57c48e6.th"
+sudo wget -O /root/.cache/torch/hub/checkpoints/92cfc3b6-ef3bcb9c.th "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/92cfc3b6-ef3bcb9c.th"
+sudo wget -O /root/.cache/torch/hub/checkpoints/04573f0d-f3cf25b2.th "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/04573f0d-f3cf25b2.th"
+sudo wget -O /root/.cache/torch/hub/checkpoints/955717e8-8726e21a.th "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/955717e8-8726e21a.th"
+sudo wget -O /root/.cache/torch/hub/checkpoints/5c90dfd2-34c22ccb.th "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/5c90dfd2-34c22ccb.th"
+sudo wget -O /root/.cache/torch/hub/checkpoints/75fc33f5-1941ce65.th "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/75fc33f5-1941ce65.th"
 sudo wget -O /home/$CURRENT_USER/.cache/torch/hub/checkpoints/5c90dfd2-34c22ccb.th "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/5c90dfd2-34c22ccb.th"
 sudo wget -O /home/$CURRENT_USER/.cache/torch/hub/checkpoints/75fc33f5-1941ce65.th "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/75fc33f5-1941ce65.th"
 
