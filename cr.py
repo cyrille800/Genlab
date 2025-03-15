@@ -632,6 +632,10 @@ def process_files_with_inference(chunk_files, output_folder, args):
     inference_script = args[0]
     
     try:
+        # Définir les limites de mémoire GPU avant toute importation
+        os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:12000"
+        os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+        
         # Construire les arguments pour inference.py
         input_args = ["--input_audio"] + chunk_files
         orig_args = args.copy()
@@ -646,23 +650,11 @@ def process_files_with_inference(chunk_files, output_folder, args):
         os.makedirs(output_folder, exist_ok=True)
         
         large, nb_chunk = get_gpu_memory_category()
-        
-        # Construire la liste d'arguments correctement
-        full_args = [sys.executable, inference_script] + input_args + orig_args[1:] + [el for el in ["--output_folder", "./results/", large, "--only_vocals", "--overlap_large", "0.0001", "--overlap_small", "1", "--chunk_size", str(nb_chunk)] if el != ""]
-        
-        # Définir les variables d'environnement pour limiter la mémoire GPU
-        env_vars = {
-            "PYTORCH_CUDA_ALLOC_CONF": "max_split_size_mb:12000",  # Limite à ~12GB (environ 85% d'un GPU 16GB)
-            "CUDA_VISIBLE_DEVICES": "0",
-            "TORCH_FORCE_WEIGHTS_ONLY": "0"
-        }
-        
-        # Combiner l'environnement actuel avec nos nouvelles variables
-        my_env = os.environ.copy()
-        my_env.update(env_vars)
-        
+        # Exécuter le script d'inférence avec les arguments
+        full_args = [inference_script] + input_args + orig_args[1:] + [el for el in ["--output_folder","./results/",large,"--only_vocals","--overlap_large","0.0001","--overlap_small","1","--chunk_size", str(nb_chunk)] if el!=""]
+        sys.argv = full_args
         print(f"Exécution de {inference_script} avec les arguments: {' '.join(full_args)}")
-        print(f"Limitation mémoire GPU: {env_vars['PYTORCH_CUDA_ALLOC_CONF']}")
+        print(f"Limitation mémoire GPU: max_split_size_mb:14000")
         
         # Vérification de l'existence du fichier
         if not os.path.isfile(inference_script):
@@ -670,20 +662,8 @@ def process_files_with_inference(chunk_files, output_folder, args):
             print(f"ERREUR CRITIQUE: {error_msg}")
             send_discord_error("Fichier d'inférence manquant", error_msg)
             return False
-        
-        # Exécuter la commande avec subprocess
-        process = subprocess.run(full_args, env=my_env, capture_output=True, text=True)
-        
-        # Vérifier si le processus s'est terminé avec succès
-        if process.returncode != 0:
-            error_msg = f"Erreur lors de l'exécution: Code de retour {process.returncode}\nStderr: {process.stderr}"
-            print(f"ERREUR CRITIQUE: {error_msg}")
-            send_discord_error("Échec de l'inférence", error_msg)
-            return False
             
-        # Afficher la sortie standard
-        print(process.stdout)
-        
+        runpy.run_path(inference_script, run_name='__main__')
         return True
     except FileNotFoundError as e:
         print(f"ERREUR CRITIQUE - Fichier non trouvé: {e}")
