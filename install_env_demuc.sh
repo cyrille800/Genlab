@@ -25,9 +25,35 @@ sudo apt install python3-pip -y
 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 python3 get-pip.py --force-reinstall
 python3 -m pip install html5lib
-python3 -m pip install -r requirements.txt
+python3 -m pip install --no-cache-dir -r requirements.txt
 python3 -m pip install boto3
 python3 -m pip install pynvml
+
+echo "Désinstallation des packages non nécessaires pour l'inférence..."
+python3 -m pip uninstall -y \
+    PyQt5 PyQt5-Qt5 PyQt5-sip \
+    gradio \
+    moviepy \
+    tqdm \
+    h11 httpcore httpx starlette uvicorn websockets aiofiles markdown-it-py fsspec \
+    ffmpy pydub \
+    aiohttp \
+    Jinja2 \
+    flask \
+    jupyter ipython ipykernel \
+    matplotlib
+
+echo "Nettoyage du cache pip..."
+python3 -m pip cache purge
+
+echo "Suppression des fichiers de test..."
+find /usr/local/lib/python3.10/dist-packages -name "tests" -type d -exec rm -rf {} + 2>/dev/null || true
+
+echo "Suppression des fichiers pyc..."
+find /usr/local/lib/python3.10/dist-packages -name "*.pyc" -delete
+
+echo "Optimisation terminée !"
+
 sudo apt install -y libsndfile1
 
 # Création du répertoire des modèles
