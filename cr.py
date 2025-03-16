@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-import torch #modif2
+import torch
 from demucs.htdemucs import HTDemucs
-import torch.serialization #io
+import torch.serialization
 import sys 
 import runpy
-import os  #os import
 import glob
 import subprocess
 import math
@@ -21,6 +20,8 @@ import json
 from pydub import AudioSegment
 import functools  
 import multiprocessing
+import tempfile
+import os
 
 # Constante pour la durée maximale d'exécution (en secondes)
 MAX_EXECUTION_TIME = 3000  # 1 heure par défaut, ajustez selon vos besoins
@@ -487,8 +488,7 @@ def split_audio_file(input_file, chunk_duration=600):  # 600 secondes = 10 minut
         return [input_file]
     
     # Créer un dossier temporaire pour les morceaux
-    temp_dir = "temp_chunks"
-    os.makedirs(temp_dir, exist_ok=True)
+    temp_dir = tempfile.mkdtemp()
     
     # Convertir la durée en millisecondes pour pydub
     chunk_duration_ms = chunk_duration * 1000
