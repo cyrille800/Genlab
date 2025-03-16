@@ -123,15 +123,6 @@ def handler(event):
             )
             return {"error": error_msg}
         
-        # Vérifier que le fichier d'entrée existe
-        if not os.path.exists(input_path):
-            error_msg = f"Le fichier d'entrée {input_path} n'existe pas"
-            send_discord_error(
-                "Erreur de fichier manquant", 
-                error_msg
-            )
-            return {"error": error_msg}
-        
         # Construire et exécuter la commande d'inférence exactement comme spécifié
         cmd = (
             f"python3 /MVSEP-MDX23-music-separation-model/cr.py {output_filename} "
