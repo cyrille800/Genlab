@@ -1,4 +1,4 @@
-import os
+import os #mise a jour
 import runpod
 import subprocess
 import requests
