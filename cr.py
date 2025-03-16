@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import torch
+import torch #modif
 from demucs.htdemucs import HTDemucs
 import torch.serialization #io
 import sys 
@@ -537,22 +537,18 @@ def get_gpu_memory_category():
         print(f"Mémoire GPU totale détectée: {total_memory_gb:.2f} Go")
         
         # Application des critères
-        if 0 <= total_memory_gb <= 8:
+        if 0 <= total_memory_gb < 8:
             return "",50000
-        elif 8.1 <= total_memory_gb <= 12:
+        elif 8 <= total_memory_gb < 13:
             return "",200000
-        elif 13 <= total_memory_gb <= 14:
+        elif 13 <= total_memory_gb < 15:
             return "--large_gpu",250000
-        elif 15 <= total_memory_gb <= 19:
+        elif 15 <= total_memory_gb < 20:
             return "--large_gpu",500000
-        elif 20 <= total_memory_gb <= 23:
+        elif 20 <= total_memory_gb < 24:
             return "--large_gpu",1000000
-        elif 24 <= total_memory_gb <= 28:
-            return "--large_gpu",1500000
-        elif 29 <= total_memory_gb <= 38:
-            return "--large_gpu",2000000
         else:
-            return "--large_gpu",2500000
+            return "--large_gpu",1500000
     
     except Exception as e:
         print(f"Erreur lors de la détection de la mémoire GPU: {e}")
