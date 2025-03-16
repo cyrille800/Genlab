@@ -686,8 +686,7 @@ def limited_cuda_malloc(*args, **kwargs):
 # Remplacer la fonction d'allocation CUDA
 torch.cuda.caching_allocator_alloc = limited_cuda_malloc
 
-# Exécuter le script d'inférence original
-sys.argv = {str(sys.argv)}
+# Exécuter le script d'inférence original avec les arguments
 runpy.run_path("{inference_script}", run_name='__main__')
 """
         
@@ -700,9 +699,12 @@ runpy.run_path("{inference_script}", run_name='__main__')
         print(f"Exécution de {inference_script} avec les arguments: {' '.join(full_args)}")
         print(f"Limitation stricte de la mémoire GPU à 12 Go")
         
-        # Exécuter le wrapper
+        # CORRECTION: Passer les arguments au wrapper via sys.argv
+        wrapper_args = [sys.executable, wrapper_path] + full_args[1:]  # Tous les arguments sauf le script d'inférence
+        
+        # Exécuter le wrapper avec les arguments
         try:
-            subprocess.run([sys.executable, wrapper_path], check=True)
+            subprocess.run(wrapper_args, check=True)
             os.unlink(wrapper_path)
             return True
         except subprocess.CalledProcessError as e:
