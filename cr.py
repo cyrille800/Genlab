@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import torch #modif1
+import torch #modif2
 from demucs.htdemucs import HTDemucs
 import torch.serialization #io
 import sys 
@@ -655,19 +655,7 @@ def process_files_with_inference(chunk_files, output_folder, args):
             send_discord_error("Fichier d'inférence manquant", error_msg)
             return False
 
-        def run_script():
-            runpy.run_path(inference_script, run_name="__main__")
-        
-        # Lancer deux processus en parallèle
-        process1 = multiprocessing.Process(target=run_script)
-        process2 = multiprocessing.Process(target=run_script)
-        
-        process1.start()
-        process2.start()
-        
-        process1.join()
-        process2.join()
-        #runpy.run_path(inference_script, run_name='__main__')
+        runpy.run_path(inference_script, run_name='__main__')
         return True
     except FileNotFoundError as e:
         print(f"ERREUR CRITIQUE - Fichier non trouvé: {e}")
