@@ -873,9 +873,6 @@ if __name__ == '__main__':
         idx = sys.argv.index('-g')
         if idx + 1 < len(sys.argv):
             gpu_use = sys.argv[idx + 1]
-            
-    print('GPU use: {}'.format(gpu_use))
-    os.environ["CUDA_VISIBLE_DEVICES"] = "{}".format(gpu_use)
     
     options = m.parse_args().__dict__
     print("Options: ".format(options))
