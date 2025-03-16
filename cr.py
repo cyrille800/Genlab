@@ -646,74 +646,25 @@ def process_files_with_inference(chunk_files, output_folder, args):
         os.makedirs(output_folder, exist_ok=True)
         
         large, nb_chunk = get_gpu_memory_category()
-        
-        # Construire les arguments pour le log et référence
-        full_args = [inference_script] + input_args + orig_args[1:] + [el for el in ["--output_folder", "./results/", large, "--only_vocals", "--overlap_large", "0.0001", "--overlap_small", "1", "--chunk_size", str(nb_chunk)] if el != ""]
-        
-        # Créer un script wrapper qui va injecter le limiteur de mémoire
-        wrapper_content = f"""
-import os
-import sys
-import torch
-import runpy
-from demucs.htdemucs import HTDemucs
-
-# Patch pour torch.load
-torch.serialization.add_safe_globals([HTDemucs])
-original_load = torch.load
-def patched_load(f, *args, **kwargs):
-    if 'weights_only' not in kwargs:
-        kwargs['weights_only'] = False
-    return original_load(f, *args, **kwargs)
-torch.load = patched_load
-
-# Limiter strictement la mémoire GPU à 12 Go
-MEMORY_LIMIT = 12 * 1024 * 1024 * 1024  # 12 Go en octets
-
-original_cuda_malloc = torch.cuda.caching_allocator_alloc
-total_allocated = 0
-
-def limited_cuda_malloc(*args, **kwargs):
-    global total_allocated
-    size = args[0]
-    if total_allocated + size > MEMORY_LIMIT:
-        raise RuntimeError(f"Dépassement de limite mémoire GPU: demandé {{size}} octets, "
-                          f"déjà alloué {{total_allocated}} octets, limite {{MEMORY_LIMIT}} octets")
-    ptr = original_cuda_malloc(*args, **kwargs)
-    total_allocated += size
-    return ptr
-
-# Remplacer la fonction d'allocation CUDA
-torch.cuda.caching_allocator_alloc = limited_cuda_malloc
-
-# Exécuter le script d'inférence original avec les arguments
-runpy.run_path("{inference_script}", run_name='__main__')
-"""
-        
-        # Écrire le wrapper dans un fichier temporaire
-        import tempfile
-        fd, wrapper_path = tempfile.mkstemp(suffix='.py')
-        with os.fdopen(fd, 'w') as f:
-            f.write(wrapper_content)
-        
+        # Exécuter le script d'inférence avec les arguments
+        full_args = [inference_script] + input_args + orig_args[1:] + [el for el in ["--output_folder","./results/",large,"--only_vocals","--overlap_large","0.0001","--overlap_small","1","--chunk_size", str(nb_chunk)] if el!=""]
+        sys.argv = full_args
         print(f"Exécution de {inference_script} avec les arguments: {' '.join(full_args)}")
-        print(f"Limitation stricte de la mémoire GPU à 12 Go")
         
-        # CORRECTION: Passer les arguments au wrapper via sys.argv
-        wrapper_args = [sys.executable, wrapper_path] + full_args[1:]  # Tous les arguments sauf le script d'inférence
-        
-        # Exécuter le wrapper avec les arguments
-        try:
-            subprocess.run(wrapper_args, check=True)
-            os.unlink(wrapper_path)
-            return True
-        except subprocess.CalledProcessError as e:
-            error_msg = f"Erreur lors de l'exécution: {str(e)}"
+        # Vérification de l'existence du fichier
+        if not os.path.isfile(inference_script):
+            error_msg = f"Le fichier {inference_script} n'existe pas"
             print(f"ERREUR CRITIQUE: {error_msg}")
-            send_discord_error("Échec de l'inférence", error_msg)
-            os.unlink(wrapper_path)
+            send_discord_error("Fichier d'inférence manquant", error_msg)
             return False
             
+        runpy.run_path(inference_script, run_name='__main__')
+        return True
+    except FileNotFoundError as e:
+        print(f"ERREUR CRITIQUE - Fichier non trouvé: {e}")
+        traceback.print_exc()
+        send_discord_error("Fichier non trouvé", f"ERREUR CRITIQUE - Fichier non trouvé: {e}", traceback.format_exc())
+        return False
     except Exception as e:
         print(f"ERREUR CRITIQUE lors de l'exécution de {inference_script}: {e}")
         traceback.print_exc()
