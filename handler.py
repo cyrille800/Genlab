@@ -122,12 +122,13 @@ def handler(event):
                 error_msg
             )
             return {"error": error_msg}
-        
+
+        gpu_id=0
         # Construire et exécuter la commande d'inférence exactement comme spécifié
         cmd = (
             f"python3 /MVSEP-MDX23-music-separation-model/cr.py {output_filename} "
             f"/MVSEP-MDX23-music-separation-model/inference_demucs.py "
-            f"--input_audio {input_path} --id_customer {customer_id}"
+            f"--input_audio {input_path} --id_customer {customer_id} --gpu_id {gpu_id}"
         )
         
         print(f"Exécution de la commande: {cmd}")
