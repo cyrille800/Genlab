@@ -1,11 +1,3 @@
-if __name__ == '__main__':
-    import os
-
-    gpu_use = "0"
-    print('GPU use: {}'.format(gpu_use))
-    os.environ["CUDA_VISIBLE_DEVICES"] = "{}".format(gpu_use)
-
-
 import numpy as np
 import torch
 import torch.nn as nn
@@ -20,6 +12,7 @@ import onnxruntime as ort
 from time import time
 import librosa
 import hashlib
+import sys
 
 
 __VERSION__ = '1.0.1'
@@ -175,7 +168,10 @@ class EnsembleDemucsMDXMusicSeparationModel:
         # print(options)
 
         if torch.cuda.is_available():
-            device = 'cuda:0'
+            gpu_id = 0
+            if 'gpu_id' in options:
+                gpu_id = options['gpu_id']
+            device = 'cuda:{}'.format(gpu_id)
         else:
             device = 'cpu'
         if 'cpu' in options:
@@ -264,7 +260,7 @@ class EnsembleDemucsMDXMusicSeparationModel:
         self.infer_session1 = ort.InferenceSession(
             model_path_onnx1,
             providers=providers,
-            provider_options=[{"device_id": 0}],
+            provider_options=[{"device_id": gpu_id if device != 'cpu' else 0}],
         )
 
         if self.single_onnx is False:
@@ -278,7 +274,7 @@ class EnsembleDemucsMDXMusicSeparationModel:
             self.infer_session2 = ort.InferenceSession(
                 model_path_onnx2,
                 providers=providers,
-                provider_options=[{"device_id": 0}],
+                provider_options=[{"device_id": gpu_id if device != 'cpu' else 0}],
             )
 
         self.device = device
@@ -464,7 +460,10 @@ class EnsembleDemucsMDXMusicSeparationModelLowGPU:
         # print(options)
 
         if torch.cuda.is_available():
-            device = 'cuda:0'
+            gpu_id = 0
+            if 'gpu_id' in options:
+                gpu_id = options['gpu_id']
+            device = 'cuda:{}'.format(gpu_id)
         else:
             device = 'cpu'
         if 'cpu' in options:
@@ -583,7 +582,7 @@ class EnsembleDemucsMDXMusicSeparationModelLowGPU:
         infer_session1 = ort.InferenceSession(
             model_path_onnx1,
             providers=self.providers,
-            provider_options=[{"device_id": 0}],
+            provider_options=[{"device_id": gpu_id if self.device != 'cpu' else 0}],
         )
         overlap = overlap_large
         sources1 = demix_full(
@@ -612,7 +611,7 @@ class EnsembleDemucsMDXMusicSeparationModelLowGPU:
             infer_session2 = ort.InferenceSession(
                 model_path_onnx2,
                 providers=self.providers,
-                provider_options=[{"device_id": 0}],
+                provider_options=[{"device_id": gpu_id if self.device != 'cpu' else 0}],
             )
 
             overlap = overlap_large
@@ -863,7 +862,21 @@ if __name__ == '__main__':
     m.add_argument("--large_gpu", action='store_true', help="It will store all models on GPU for faster processing of multiple audio files. Requires 11 and more GB of free GPU memory.")
     m.add_argument("--use_kim_model_1", action='store_true', help="Use first version of Kim model (as it was on contest).")
     m.add_argument("--only_vocals", action='store_true', help="Only create vocals and instrumental. Skip bass, drums, other")
+    m.add_argument("--gpu_id", "-g", type=int, help="Specify which GPU to use (default: 0)", required=False, default=0)
 
+    gpu_use = "0"
+    if '--gpu_id' in sys.argv:
+        idx = sys.argv.index('--gpu_id')
+        if idx + 1 < len(sys.argv):
+            gpu_use = sys.argv[idx + 1]
+    elif '-g' in sys.argv:
+        idx = sys.argv.index('-g')
+        if idx + 1 < len(sys.argv):
+            gpu_use = sys.argv[idx + 1]
+            
+    print('GPU use: {}'.format(gpu_use))
+    os.environ["CUDA_VISIBLE_DEVICES"] = "{}".format(gpu_use)
+    
     options = m.parse_args().__dict__
     print("Options: ".format(options))
     for el in options:
