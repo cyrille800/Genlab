@@ -19,7 +19,7 @@ import signal
 import requests
 import json
 from pydub import AudioSegment
-import functools 
+import functools  
 
 # Constante pour la durée maximale d'exécution (en secondes)
 MAX_EXECUTION_TIME = 3000  # 1 heure par défaut, ajustez selon vos besoins
