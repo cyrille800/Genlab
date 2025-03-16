@@ -546,7 +546,7 @@ def get_gpu_memory_category():
             return "--large_gpu",250000
         elif 15 <= total_memory_gb < 20:
             return "--large_gpu",500000
-        elif 20 <= total_memory_gb < 24:
+        elif 20 <= total_memory_gb <= 24:
             return "--large_gpu",1000000
         else:
             return "--large_gpu",1500000
