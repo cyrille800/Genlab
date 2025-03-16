@@ -20,6 +20,7 @@ import requests
 import json
 from pydub import AudioSegment
 import functools  
+import multiprocessing
 
 # Constante pour la durée maximale d'exécution (en secondes)
 MAX_EXECUTION_TIME = 3000  # 1 heure par défaut, ajustez selon vos besoins
@@ -653,8 +654,20 @@ def process_files_with_inference(chunk_files, output_folder, args):
             print(f"ERREUR CRITIQUE: {error_msg}")
             send_discord_error("Fichier d'inférence manquant", error_msg)
             return False
-            
-        runpy.run_path(inference_script, run_name='__main__')
+
+        def run_script():
+            runpy.run_path(inference_script, run_name="__main__")
+        
+        # Lancer deux processus en parallèle
+        process1 = multiprocessing.Process(target=run_script)
+        process2 = multiprocessing.Process(target=run_script)
+        
+        process1.start()
+        process2.start()
+        
+        process1.join()
+        process2.join()
+        #runpy.run_path(inference_script, run_name='__main__')
         return True
     except FileNotFoundError as e:
         print(f"ERREUR CRITIQUE - Fichier non trouvé: {e}")
