@@ -647,6 +647,9 @@ def process_files_with_inference(chunk_files, output_folder, args):
         
         large, nb_chunk = get_gpu_memory_category()
         
+        # Construire les arguments pour le log et référence
+        full_args = [inference_script] + input_args + orig_args[1:] + [el for el in ["--output_folder", "./results/", large, "--only_vocals", "--overlap_large", "0.0001", "--overlap_small", "1", "--chunk_size", str(nb_chunk)] if el != ""]
+        
         # Créer un script wrapper qui va injecter le limiteur de mémoire
         wrapper_content = f"""
 import os
@@ -664,8 +667,7 @@ def patched_load(f, *args, **kwargs):
     return original_load(f, *args, **kwargs)
 torch.load = patched_load
 
-# Limiter strictement la mémoire GPU à 12 Go (environ 80% de 16 Go)
-# Ceci est plus direct et efficace que les variables d'environnement
+# Limiter strictement la mémoire GPU à 12 Go
 MEMORY_LIMIT = 12 * 1024 * 1024 * 1024  # 12 Go en octets
 
 original_cuda_malloc = torch.cuda.caching_allocator_alloc
@@ -681,10 +683,10 @@ def limited_cuda_malloc(*args, **kwargs):
     total_allocated += size
     return ptr
 
-# Remplacer la fonction d'allocation CUDA par notre version limitée
+# Remplacer la fonction d'allocation CUDA
 torch.cuda.caching_allocator_alloc = limited_cuda_malloc
 
-# Maintenant exécuter le script d'inférence original
+# Exécuter le script d'inférence original
 sys.argv = {str(sys.argv)}
 runpy.run_path("{inference_script}", run_name='__main__')
 """
