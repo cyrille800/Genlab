@@ -1129,21 +1129,6 @@ if __name__ == "__main__":
 
         # quatrieme mise a jour
         push_kv_runpod(100)
-            
-        try:
-            # Logique conditionnelle
-            if PROVIDER_POD == "RUNPOD_SECRET_" or PROVIDER_POD == "":
-                runpod_pod_id = os.environ.get('RUNPOD_POD_ID')
-                # Exécution de la commande runpodctl
-                print("===>", runpod_pod_id)
-                command = f'runpodctl remove pod {runpod_pod_id}'
-                subprocess.run(command, shell=True)
-            else:
-                container_id = os.environ.get('CONTAINER_ID')
-                container_api_key = os.environ.get('CONTAINER_API_KEY')
-                # Exécution de la commande curl pour Vast.ai
-                command = f'curl -X DELETE "https://console.vast.ai/api/v0/instances/{container_id}/?api_key={container_api_key}" -H "Accept: application/json"'
-                subprocess.run(command, shell=True)
         except Exception as e:
             id_machine = os.environ.get('RUNPOD_POD_ID') if PROVIDER_POD=="RUNPOD_SECRET_" or PROVIDER_POD == "" else os.environ.get('CONTAINER_ID')
             print(f"Échec de la tentative de de suppression du pod {id_machine}")
