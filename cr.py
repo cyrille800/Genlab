@@ -644,7 +644,7 @@ def process_files_with_inference(chunk_files, output_folder, args):
         
         large, nb_chunk = get_gpu_memory_category()
         # Exécuter le script d'inférence avec les arguments
-        full_args = [inference_script] + input_args + orig_args[1:] + [el for el in ["--output_folder","./results/",large,"--only_vocals","--overlap_large","0.0001","--overlap_small","1","--chunk_size", str(nb_chunk)] if el!=""]
+        full_args = [inference_script] + input_args + orig_args[1:] + [el for el in ["--output_folder",output_folder,large,"--only_vocals","--overlap_large","0.0001","--overlap_small","1","--chunk_size", str(nb_chunk)] if el!=""]
         sys.argv = full_args
         print(f"Exécution de {inference_script} avec les arguments: {' '.join(full_args)}")
         
