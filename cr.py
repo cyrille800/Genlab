@@ -1128,7 +1128,7 @@ if __name__ == "__main__":
             send_discord_error("Erreur fatale de mise à jour du statut", f"ERREUR CRITIQUE lors de la mise à jour du fichier d'état: {e}", traceback.format_exc())
 
             # quatrieme mise a jour
-            push_kv_runpod(100)
+            push_kv_runpod(100)  
         except Exception as e:
             id_machine = os.environ.get('RUNPOD_POD_ID') if PROVIDER_POD=="RUNPOD_SECRET_" or PROVIDER_POD == "" else os.environ.get('CONTAINER_ID')
             print(f"Échec de la tentative de de suppression du pod {id_machine}")
