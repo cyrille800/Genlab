@@ -30,13 +30,13 @@ if os.environ.get("RUNPOD_SECRET_CLOUDFARE_R2_ACCESS_KEY_ID"):
 if os.environ.get("VASTAI_SECRET_CLOUDFARE_R2_ACCESS_KEY_ID"):
     PROVIDER_POD = "VASTAI_SECRET_"
 
+genlab_customer_id=""
 def push_kv_runpod(data):
     try:
 
         account_id = os.environ.get(f"{PROVIDER_POD}CLOUDFARE_R2_ACCOUNT_ID")
         kv_namespace_id = os.environ.get(f"{PROVIDER_POD}CLOUDFARE_KV_NAMESPACE_ID")
         api_token = os.environ.get(f"{PROVIDER_POD}CLOUDFARE_KV_API_TOKEN")
-        genlab_customer_id = os.environ.get(f"{PROVIDER_POD}GENLAB_CUSTOMER_ID")
         
         # Headers pour l'authentification
         headers = {
@@ -770,19 +770,36 @@ if __name__ == "__main__":
     status_file_r2_path = None
     
     try:
-        # Vérifier si on a au moins 3 arguments: cr.py, nom_cible.flac, inference.py
-        if len(sys.argv) < 3:
-            error_msg = "Usage: python3 cr.py <nom_target.flac> inference.py --input_audio <fichier_source_ou_chemin_r2.flac> [autres arguments...]"
-            print(error_msg)
-            send_discord_error("Arguments insuffisants", error_msg)
-            sys.exit(1)
+        # Le nom cible pour Cloudflare est le premier argument
+        cloudflare_target_name = sys.argv[1]
         
+        # Récupérer les arguments d'origine (sans cr.py et nom_cible.flac)
+        original_args = sys.argv[2:]
+
         # Le nom cible pour Cloudflare est le premier argument
         cloudflare_target_name = sys.argv[1]
         
         # Récupérer les arguments d'origine (sans cr.py et nom_cible.flac)
         original_args = sys.argv[2:]
         
+        # Analyser les arguments pour trouver --id_customer
+        id_customer = None
+        i = 0
+        while i < len(original_args):
+            if original_args[i] == "--id_customer":
+                if i + 1 < len(original_args):
+                    id_customer = original_args[i + 1]
+                    # Supprimer l'argument et sa valeur de la liste des arguments originaux
+                    original_args.pop(i)
+                    original_args.pop(i)
+                    break
+                else:
+                    print("Erreur: Valeur manquante pour --id_customer")
+                    sys.exit(1)
+            i += 1
+
+        print("id customer = ",id_customer)
+        genlab_customer_id= str(id_customer)
         # Trouver le fichier d'entrée et le dossier de sortie
         input_source = None
         input_arg_idx = -1
@@ -799,7 +816,7 @@ if __name__ == "__main__":
                 i += 2  # Sauter l'argument et sa valeur
             else:
                 i += 1  # Avancer au prochain argument
-        
+
         if not input_source:
             error_msg = "Aucun fichier d'entrée spécifié"
             print(error_msg)
