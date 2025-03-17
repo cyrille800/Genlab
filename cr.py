@@ -22,6 +22,10 @@ import functools
 import multiprocessing
 import tempfile
 import os
+import uuid
+import time
+import os
+from datetime import datetime
 
 # Constante pour la durée maximale d'exécution (en secondes)
 MAX_EXECUTION_TIME = 3000  # 1 heure par défaut, ajustez selon vos besoins
@@ -910,7 +914,7 @@ if __name__ == "__main__":
         
         if len(instrum_files) > 1:
             # Concaténer tous les fichiers instrum
-            temp_concat = "temp_concat.wav"
+            temp_concat = f"temp_concat_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}_{time.time()}_{os.getpid()}_{uuid.uuid4()}.wav"
             if not concatenate_audio_files(instrum_files, temp_concat):
                 error_msg = "Erreur lors de la concaténation des fichiers instrum"
                 print(error_msg)
