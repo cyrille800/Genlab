@@ -681,7 +681,7 @@ def concatenate_audio_files(files, output_file):
     """
     try:
         # Créer un fichier de liste pour ffmpeg
-        list_file = "concat_list.txt"
+        list_file = f"concat_list_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}_{time.time()}_{os.getpid()}_{uuid.uuid4()}.txt"
         with open(list_file, "w") as f:
             for file in files:
                 f.write(f"file '{file}'\n")
