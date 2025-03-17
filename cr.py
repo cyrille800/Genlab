@@ -1029,7 +1029,10 @@ if __name__ == "__main__":
             print("\n--- MISE À JOUR DU STATUT FINAL ---")
             final_status = "DONE" if global_success else "NOT_DONE"
             print(f"Statut final: {final_status}")
-            
+
+            if final_status=="DONE":
+                # quatrieme mise a jour
+                push_kv_runpod(100)  
             # Si status_file n'a pas été défini, créer un fichier avec un nom par défaut
             if not status_file:
                 print("Aucun fichier d'état n'a été créé précédemment, création d'un fichier par défaut")
@@ -1126,9 +1129,6 @@ if __name__ == "__main__":
             print(f"ERREUR CRITIQUE lors de la mise à jour du fichier d'état: {e}")
             traceback.print_exc()
             send_discord_error("Erreur fatale de mise à jour du statut", f"ERREUR CRITIQUE lors de la mise à jour du fichier d'état: {e}", traceback.format_exc())
-
-            # quatrieme mise a jour
-            push_kv_runpod(100)  
         except Exception as e:
             id_machine = os.environ.get('RUNPOD_POD_ID') if PROVIDER_POD=="RUNPOD_SECRET_" or PROVIDER_POD == "" else os.environ.get('CONTAINER_ID')
             print(f"Échec de la tentative de de suppression du pod {id_machine}")
@@ -1136,5 +1136,5 @@ if __name__ == "__main__":
                     
         # Sortir avec le code d'erreur approprié
         print(f"\nFin du script avec statut: {'SUCCÈS' if global_success else 'ÉCHEC'}")
-            
+
         sys.exit(0 if global_success else 1)
