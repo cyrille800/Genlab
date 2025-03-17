@@ -804,7 +804,7 @@ if __name__ == "__main__":
         # Trouver le fichier d'entrée et le dossier de sortie
         input_source = None
         input_arg_idx = -1
-        output_folder = "./results/"
+        output_folder = f"./results_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}_{time.time()}_{os.getpid()}_{uuid.uuid4()}/"
         
         i = 0
         while i < len(original_args):
