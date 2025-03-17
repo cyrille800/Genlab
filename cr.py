@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import torch #mise a jour
+import torch #mise
 from demucs.htdemucs import HTDemucs
 import torch.serialization
 import sys 
@@ -813,7 +813,6 @@ if __name__ == "__main__":
                 input_arg_idx = i+1
                 i += 2  # Sauter l'argument et sa valeur
             elif original_args[i] == "--output_folder" and i+1 < len(original_args):
-                output_folder = original_args[i+1]
                 i += 2  # Sauter l'argument et sa valeur
             else:
                 i += 1  # Avancer au prochain argument
